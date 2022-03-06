@@ -45,5 +45,5 @@ func upsertIpDetailsIntoDatabase(ipDetails models.IpDetails) error {
 		return noRowsAffected
 	}
 
-	return nil
+	return err
 }

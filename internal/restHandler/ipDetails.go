@@ -140,7 +140,7 @@ func createCsvHeaderMap(header []string) map[string]int {
 func checkAndInsertIpDetails(mp map[string]int, record []string, failedCount *uint64, successCount *uint64, workerChan chan byte, wg *sync.WaitGroup) {
 	defer func() {
 		wg.Done()
-		_ = <-workerChan
+		<-workerChan
 	}()
 
 	ip := strings.TrimSpace(record[mp["ip"]])
