@@ -1,0 +1,161 @@
+openapi: 3.0.1
+info:
+  title: ip-locator
+  version: 1.0.0
+servers:
+- url: https://127.0.0.1/api/v1
+- url: http://127.0.0.1/api/v1
+tags:
+- name: IP Details
+  description: Setting and getting IP details
+paths:
+  /ip/details:
+    post:
+      tags:
+      - IP Details
+      summary: get details of an IP
+      description: This endpoint returns details about requested ip address
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ip_details_body'
+        required: false
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_200'
+        "400":
+          description: The request doesn't have requirement or there is a problem
+            with its provided data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_400'
+        "404":
+          description: The server don't have any details about requested IP
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_404'
+      x-codegen-request-body-name: passenger_id
+  /ip/upload-csv:
+    post:
+      tags:
+      - IP Details
+      summary: receive a csv and upload it into database
+      description: "This endpoint receive a csv with these headers: ip_address,country_code,country,city,latitude,longitude,mystery_value\
+        \ in any order and import them to database"
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ip_uploadcsv_body'
+      responses:
+        "200":
+          description: The request started to process with returned batch id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_200_1'
+        "400":
+          description: The request doesn't have requirement or there is a problem
+            with its provided data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_400_1'
+components:
+  schemas:
+    inline_response_404:
+      type: object
+      properties:
+        message:
+          type: string
+          description: error message
+          example: ip not found
+    inline_response_200_1:
+      type: object
+      properties:
+        success:
+          type: integer
+          description: number of successfull insertion
+          example: 10
+        failed:
+          type: integer
+          description: number of failed insertion
+          example: 5
+      example:
+        success: 10
+        failed: 5
+    inline_response_200:
+      type: object
+      properties:
+        ip:
+          type: string
+          description: ipv4 in string
+          example: 217.121.148.207
+        country_code:
+          type: string
+          description: country code in iso3166 alpha2
+          example: BB
+        country:
+          type: string
+          description: country name
+          example: Kuwait
+        city:
+          type: string
+          description: city name
+          example: Kreigerberg
+        latitude:
+          type: number
+          description: latitude
+          example: -19.45882757428788
+        longitude:
+          type: number
+          description: longitude
+          example: -1.2659100104943661
+        mystery_value:
+          type: integer
+          description: I don't know the usage of it but it is as it is! a big integer
+          example: 5852993967
+      example:
+        country_code: BB
+        country: Kuwait
+        mystery_value: 5852993967
+        city: Kreigerberg
+        ip: 217.121.148.207
+        latitude: -19.45882757428788
+        longitude: -1.2659100104943661
+    ip_details_body:
+      required:
+      - ip
+      type: object
+      properties:
+        ip:
+          type: string
+          description: ipv4 in string
+          example: 217.121.148.207
+    ip_uploadcsv_body:
+      properties:
+        ip_details:
+          type: string
+          format: binary
+    inline_response_400:
+      type: object
+      properties:
+        message:
+          type: string
+          description: error message
+          example: "Key: 'getIpDetailsRequest.Ip' Error:Field validation for 'Ip'\
+            \ failed on the 'required' tag"
+    inline_response_400_1:
+      type: object
+      properties:
+        message:
+          type: string
+          description: error message
+          example: missing file

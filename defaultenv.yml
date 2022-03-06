@@ -1,0 +1,9 @@
+DATABASE:
+  USERNAME: postgres
+  PASSWORD: secret
+  PORT: 5432
+  HOST: postgres
+  DB_NAME: ip-locator
+  MAX_OPEN_CONNECTIONS: 10
+  MAX_IDLE_CONNECTIONS: 5
+  TIMEZONE: 'Asia/Tehran'

@@ -1,0 +1,30 @@
+version: "3"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    image: ip-locator_app
+    container_name: ip-locator_app
+    restart: always
+    working_dir: /app
+    command: >
+      bash -c "./ip-locator migrate -c /app/defaultenv.yml -m /app/migrations && \
+               ./ip-locator -c /app/defaultenv.yml serve"
+    ports:
+      - "1323"
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:14.2
+    restart: always
+    environment:
+      - POSTGRES_PASSWORD=secret
+      - POSTGRES_DB=ip-locator
+      - PGDATA=/data/postgres
+    ports:
+      - "5432"
+    volumes:
+      - ./.docker/postgres:/data/postgres
