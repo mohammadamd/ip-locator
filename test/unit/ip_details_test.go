@@ -17,7 +17,7 @@ func TestGetIpDetailsByIp(t *testing.T) {
 	mock.ExpectQuery("SELECT ip_address,country_code,country,city,latitude,longitude,mystery_value FROM ip_details").WillReturnRows(rows)
 	mock.ExpectQuery("SELECT ip_address,country_code,country,city,latitude,longitude,mystery_value FROM ip_details").WillReturnError(sql.ErrNoRows)
 
-	ipd, err := ipDetails.GetIpDetails("127.0.0.1")
+	ipd, err := ipDetails.GetIpDetailsForIP("127.0.0.1")
 	assert.Nil(t, err)
 
 	assert.Equal(t, ipd, models.IpDetails{
@@ -30,7 +30,7 @@ func TestGetIpDetailsByIp(t *testing.T) {
 		MysteryValue: 2342534324,
 	})
 
-	_, err = ipDetails.GetIpDetails("1.2.3.4")
+	_, err = ipDetails.GetIpDetailsForIP("1.2.3.4")
 	assert.Equal(t, err, ipDetails.IpNotFound)
 }
 
@@ -39,7 +39,7 @@ func TestImportIpDetails(t *testing.T) {
 	mock.ExpectExec("INSERT INTO ip_details").WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectExec("INSERT INTO ip_details").WillReturnResult(sqlmock.NewResult(0, 0))
 
-	err := ipDetails.ImportIpDetails(models.IpDetails{
+	err := ipDetails.InsertNewIPDetails(models.IpDetails{
 		Ip:           "127.0.0.1",
 		CountryCode:  "US",
 		Country:      "United States",
@@ -53,7 +53,7 @@ func TestImportIpDetails(t *testing.T) {
 		t.Errorf("could not import ip details: %s", err)
 	}
 
-	err = ipDetails.ImportIpDetails(models.IpDetails{
+	err = ipDetails.InsertNewIPDetails(models.IpDetails{
 		Ip:           "127.0.0.1",
 		CountryCode:  "US",
 		Country:      "United States",

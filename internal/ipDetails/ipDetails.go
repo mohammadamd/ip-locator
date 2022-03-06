@@ -11,10 +11,10 @@ var (
 	IpNotFound      = fmt.Errorf("IP not found")
 )
 
-// GetIpDetails will return the details of an IP address
+// GetIpDetailsForIP will return the details of an IP address
 // If the IP address is not found, IpNotFound will be returned
-func GetIpDetails(ip string) (models.IpDetails, error) {
-	details, err := getIpDetailsByIp(ip)
+func GetIpDetailsForIP(ip string) (models.IpDetails, error) {
+	details, err := getIpDetailsByIpFromDatabase(ip)
 	if err == sql.ErrNoRows {
 		return details, IpNotFound
 	}
@@ -22,11 +22,11 @@ func GetIpDetails(ip string) (models.IpDetails, error) {
 	return details, err
 }
 
-// ImportIpDetails will create a new IP address
+// InsertNewIPDetails will create a new IP address
 // If the IP address exists will update its details
 // If the IP address exists and details was same will return IpAlreadyExists
-func ImportIpDetails(details models.IpDetails) error {
-	err := upsertIpDetails(details)
+func InsertNewIPDetails(details models.IpDetails) error {
+	err := upsertIpDetailsIntoDatabase(details)
 	if err == noRowsAffected {
 		return IpAlreadyExists
 	}

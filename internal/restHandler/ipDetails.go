@@ -42,7 +42,7 @@ func GetIpDetails() func(c echo.Context) error {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
 
-		details, err := ipDetails.GetIpDetails(req.IP)
+		details, err := ipDetails.GetIpDetailsForIP(req.IP)
 		if err == ipDetails.IpNotFound {
 			return echo.NewHTTPError(http.StatusNotFound, "ip not found")
 		}
@@ -69,7 +69,7 @@ func GetIpDetails() func(c echo.Context) error {
 // InsertIpDetailsByCSV receive a csv file with ip details and upsert them into the database
 func InsertIpDetailsByCSV() func(c echo.Context) error {
 	return func(c echo.Context) error {
-		f, err := c.FormFile("ip_details")
+		file, err := c.FormFile("ip_details")
 		if err == http.ErrMissingFile {
 			return echo.NewHTTPError(http.StatusBadRequest, "missing file")
 		}
@@ -79,14 +79,14 @@ func InsertIpDetailsByCSV() func(c echo.Context) error {
 			return echo.ErrInternalServerError
 		}
 
-		of, err := f.Open()
+		openedFile, err := file.Open()
 		if err != nil {
 			logrus.Error("could not open file: ", err)
 			return echo.ErrInternalServerError
 		}
 
-		cr := csv.NewReader(of)
-		header, err := cr.Read()
+		csvReader := csv.NewReader(openedFile)
+		header, err := csvReader.Read()
 		if err != nil {
 			logrus.Error("could not read header: ", err)
 			return echo.ErrInternalServerError
@@ -103,7 +103,7 @@ func InsertIpDetailsByCSV() func(c echo.Context) error {
 		var wg sync.WaitGroup
 
 		for {
-			record, err := cr.Read()
+			record, err := csvReader.Read()
 			if err == io.EOF {
 				break
 			}
@@ -143,36 +143,36 @@ func checkAndInsertIpDetails(mp map[string]int, record []string, failedCount *ui
 		_ = <-workerChan
 	}()
 
-	Ip := strings.TrimSpace(record[mp["ip"]])
-	CountryCode := strings.TrimSpace(record[mp["country_code"]])
-	Country := strings.TrimSpace(record[mp["country"]])
-	City := strings.TrimSpace(record[mp["city"]])
-	Latitude, err := strconv.ParseFloat(strings.TrimSpace(record[mp["latitude"]]), 64)
+	ip := strings.TrimSpace(record[mp["ip"]])
+	countryCode := strings.TrimSpace(record[mp["country_code"]])
+	country := strings.TrimSpace(record[mp["country"]])
+	city := strings.TrimSpace(record[mp["city"]])
+	latitude, err := strconv.ParseFloat(strings.TrimSpace(record[mp["latitude"]]), 64)
 	if err != nil {
 		atomic.AddUint64(failedCount, 1)
 		return
 	}
 
-	Longitude, err := strconv.ParseFloat(strings.TrimSpace(record[mp["longitude"]]), 64)
+	longitude, err := strconv.ParseFloat(strings.TrimSpace(record[mp["longitude"]]), 64)
 	if err != nil {
 		atomic.AddUint64(failedCount, 1)
 		return
 	}
 
-	MysteryValue, err := strconv.ParseInt(strings.TrimSpace(record[mp["mystery_value"]]), 10, 64)
+	mysteryValue, err := strconv.ParseInt(strings.TrimSpace(record[mp["mystery_value"]]), 10, 64)
 	if err != nil {
 		atomic.AddUint64(failedCount, 1)
 		return
 	}
 
 	ipd := models.IpDetails{
-		Ip:           Ip,
-		CountryCode:  CountryCode,
-		Country:      Country,
-		City:         City,
-		Latitude:     Latitude,
-		Longitude:    Longitude,
-		MysteryValue: int(MysteryValue),
+		Ip:           ip,
+		CountryCode:  countryCode,
+		Country:      country,
+		City:         city,
+		Latitude:     latitude,
+		Longitude:    longitude,
+		MysteryValue: int(mysteryValue),
 	}
 
 	err = validator.New().Struct(ipd)
@@ -181,7 +181,7 @@ func checkAndInsertIpDetails(mp map[string]int, record []string, failedCount *ui
 		return
 	}
 
-	err = ipDetails.ImportIpDetails(ipd)
+	err = ipDetails.InsertNewIPDetails(ipd)
 	if err != nil {
 		atomic.AddUint64(failedCount, 1)
 		logrus.Error("could not insert into database: ", err)

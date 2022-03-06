@@ -14,9 +14,9 @@ const (
 		"DO UPDATE SET country_code = EXCLUDED.country_code, country = EXCLUDED.country, city = EXCLUDED.city, latitude = EXCLUDED.latitude, longitude = EXCLUDED.longitude, mystery_value = EXCLUDED.mystery_value, updated_at = now()"
 )
 
-// getIpDetailsByIp returns the ip details for the given ip address
+// getIpDetailsByIpFromDatabase returns the ip details for the given ip address
 // If the ip address is not found, it returns sql.ErrNoRows
-func getIpDetailsByIp(ip string) (models.IpDetails, error) {
+func getIpDetailsByIpFromDatabase(ip string) (models.IpDetails, error) {
 	var ipDetails models.IpDetails
 	r := database.GetDatabaseConnection().QueryRow(getIpDetailsByIpQuery, ip)
 	if r.Err() != nil {
@@ -31,10 +31,10 @@ func getIpDetailsByIp(ip string) (models.IpDetails, error) {
 	return ipDetails, nil
 }
 
-// upsertIpDetails inserts or updates the ip details for the given ip address
+// upsertIpDetailsIntoDatabase inserts or updates the ip details for the given ip address
 // If the ip address exists it will try to update it, if it does not exist it will insert it
 // If there were no rows affected, it returns noRowsAffected
-func upsertIpDetails(ipDetails models.IpDetails) error {
+func upsertIpDetailsIntoDatabase(ipDetails models.IpDetails) error {
 	res, err := database.GetDatabaseConnection().Exec(upsertIpDetailsQuery, ipDetails.Ip, ipDetails.CountryCode, ipDetails.Country, ipDetails.City, ipDetails.Latitude, ipDetails.Longitude, ipDetails.MysteryValue)
 	if err != nil {
 		return err
