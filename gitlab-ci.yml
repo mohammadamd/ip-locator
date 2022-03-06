@@ -1,0 +1,94 @@
+variables:
+  PRODUCTION_REGISTRY: "registry.gitlab.com"
+  PRODUCTION_PROJECT_NAME: "ip-locator"
+
+stages:
+  - test
+  - build
+  - test
+  - delivery
+  - loadtest
+
+Test:
+  image: golang:1.16-alpine
+  stage: test
+  script:
+    - go test -coverpkg ./internal/... ./test/... -coverprofile .coverage.txt
+    - go tool cover -func .coverage.txt
+
+Build:
+  image: docker:latest
+  stage: build
+  services:
+    - name: docker:dind
+      alias: docker
+  script:
+    - docker build -t ${CI_PROJECT_NAME}:${CI_COMMIT_REF_SLUG} .
+  after_script:
+    - docker save -o ${CI_PROJECT_NAME}-${CI_COMMIT_REF_SLUG}.tar ${CI_PROJECT_NAME}:${CI_COMMIT_REF_SLUG}
+  artifacts:
+    name: "docker-image-$CI_PROJECT_NAME-$CI_COMMIT_REF_SLUG"
+    paths:
+      - ${CI_PROJECT_NAME}-${CI_COMMIT_REF_SLUG}.tar
+
+
+Push latest:
+  image: docker:latest
+  stage: delivery
+  only:
+    - master
+  dependencies:
+    - Build
+  variables:
+    DOCKER_DRIVER: overlay2
+    REGISTRY_IMAGE: "$PRODUCTION_REGISTRY/$PRODUCTION_PROJECT_NAME/$CI_PROJECT_NAME"
+  before_script:
+    - docker login -u gitlab-ci -p ${PRODUCTION_TOKEN} ${PRODUCTION_REGISTRY}
+    - docker load --input ${CI_PROJECT_NAME}-${CI_COMMIT_REF_SLUG}.tar
+    - docker tag ${CI_PROJECT_NAME}:${CI_COMMIT_REF_SLUG} ${REGISTRY_IMAGE}:latest
+  script:
+    - docker push ${REGISTRY_IMAGE}:latest
+
+Push develop:
+  image: docker:latest
+  stage: delivery
+  only:
+    - dev
+  dependencies:
+    - Build
+  variables:
+    DOCKER_DRIVER: overlay2
+    REGISTRY_IMAGE: "$PRODUCTION_REGISTRY/$PRODUCTION_PROJECT_NAME/$CI_PROJECT_NAME"
+  before_script:
+    - docker login -u gitlab-ci -p ${PRODUCTION_TOKEN} ${PRODUCTION_REGISTRY}
+    - docker load --input ${CI_PROJECT_NAME}-${CI_COMMIT_REF_SLUG}.tar
+    - docker tag ${CI_PROJECT_NAME}:${CI_COMMIT_REF_SLUG} ${REGISTRY_IMAGE}:dev
+  script:
+    - docker push ${REGISTRY_IMAGE}:dev
+
+Push tag:
+  image: docker:latest
+  stage: delivery
+  only:
+    - tags
+  dependencies:
+    - Build
+  variables:
+    DOCKER_DRIVER: overlay2
+    REGISTRY_IMAGE: "$PRODUCTION_REGISTRY/$PRODUCTION_PROJECT_NAME/$CI_PROJECT_NAME"
+  before_script:
+    - docker login -u gitlab-ci -p ${PRODUCTION_TOKEN} ${PRODUCTION_REGISTRY}
+    - docker load --input ${CI_PROJECT_NAME}-${CI_COMMIT_REF_SLUG}.tar
+    - docker tag ${CI_PROJECT_NAME}:${CI_COMMIT_REF_SLUG} ${REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}
+  script:
+    - docker push ${REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}
+
+Production loadtest:
+  image:
+    name: loadimpact/k6:latest
+    entrypoint: [ '' ]
+
+  stage: loadtest
+  script:
+    - k6 run .k6/${K6_SCRIPT} --out "influxdb=${INFLUX_DB}"
+  when: manual
